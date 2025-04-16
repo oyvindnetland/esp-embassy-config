@@ -1,0 +1,38 @@
+[alias]
+esp32_example_uart = "build --release --example config_uart --features=esp32example --target=xtensa-esp32-none-elf -Z build-std=alloc,core"
+esp32_example_run_uart = "run --release --example config_uart --features=esp32example --target=xtensa-esp32-none-elf -Z build-std=alloc,core"
+esp32s2_example_uart = "build --release --example config_uart --features=esp32s2example --target=xtensa-esp32s2-none-elf -Z build-std=alloc,core"
+esp32s2_example_run_uart = "run --release --example config_uart --features=esp32s2example --target=xtensa-esp32s2-none-elf -Z build-std=alloc,core"
+esp32s3_example_uart = "build --release --example config_uart --features=esp32s3example --target=xtensa-esp32s3-none-elf -Z build-std=alloc,core"
+esp32s3_example_run_uart = "run --release --example config_uart --features=esp32s3example --target=xtensa-esp32s3-none-elf -Z build-std=alloc,core"
+esp32c2_example_uart = "build --release --example config_uart --features=esp32c2example --target=riscv32imc-unknown-none-elf -Z build-std=alloc,core"
+esp32c2_example_run_uart = "run --release --example config_uart --features=esp32c2example --target=riscv32imc-unknown-none-elf -Z build-std=alloc,core"
+esp32c3_example_uart = "build --release --example config_uart --features=esp32c3example --target=riscv32imc-unknown-none-elf -Z build-std=alloc,core"
+esp32c3_example_run_uart = "run --release --example config_uart --features=esp32c3example --target=riscv32imc-unknown-none-elf -Z build-std=alloc,core"
+esp32c6_example_uart = "build --release --example config_uart --features=esp32c6example --target=riscv32imac-unknown-none-elf -Z build-std=alloc,core"
+esp32c6_example_run_uart = "run --release --example config_uart --features=esp32c6example --target=riscv32imac-unknown-none-elf -Z build-std=alloc,core"
+esp32h2_example_uart = "build --release --example config_uart --features=esp32h2example --target=riscv32imac-unknown-none-elf -Z build-std=alloc,core"
+esp32h2_example_run_uart = "run --release --example config_uart --features=esp32h2example --target=riscv32imac-unknown-none-elf -Z build-std=alloc,core"
+
+[target.xtensa-esp32-none-elf]
+runner = "espflash flash --monitor"
+rustflags = ["-C", "link-arg=-nostartfiles", "-C", "link-arg=-Wl,-Tlinkall.x"]
+
+[target.xtensa-esp32s2-none-elf]
+runner = "espflash flash --monitor"
+rustflags = ["-C", "link-arg=-nostartfiles", "-C", "link-arg=-Wl,-Tlinkall.x"]
+
+[target.xtensa-esp32s3-none-elf]
+runner = "espflash flash --monitor"
+rustflags = ["-C", "link-arg=-nostartfiles", "-C", "link-arg=-Wl,-Tlinkall.x"]
+
+[target.riscv32imc-unknown-none-elf]
+runner = "espflash flash --monitor"
+rustflags = ["-C", "force-frame-pointers", "-C", "link-arg=-Tlinkall.x"]
+
+[target.riscv32imac-unknown-none-elf]
+runner = "espflash flash --monitor"
+rustflags = ["-C", "force-frame-pointers", "-C", "link-arg=-Tlinkall.x"]
+
+[env]
+ESP_LOG = "INFO"
