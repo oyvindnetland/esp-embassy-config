@@ -14,6 +14,10 @@ esp32c6_example_run_uart = "run --release --example config_uart --features=esp32
 esp32h2_example_uart = "build --release --example config_uart --features=esp32h2example --target=riscv32imac-unknown-none-elf -Z build-std=alloc,core"
 esp32h2_example_run_uart = "run --release --example config_uart --features=esp32h2example --target=riscv32imac-unknown-none-elf -Z build-std=alloc,core"
 
+esp32c3_example_wifi = "build --release --example config_wifi --features=esp32c3example --target=riscv32imc-unknown-none-elf -Z build-std=alloc,core"
+esp32c3_example_run_wifi = "run --release --example config_wifi --features=esp32c3example --target=riscv32imc-unknown-none-elf -Z build-std=alloc,core"
+
+
 [target.xtensa-esp32-none-elf]
 runner = "espflash flash --monitor"
 rustflags = ["-C", "link-arg=-nostartfiles", "-C", "link-arg=-Wl,-Tlinkall.x"]
