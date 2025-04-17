@@ -8,7 +8,10 @@ use core::fmt;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
-use esp_hal::{Async, uart::UartRx};
+use esp_hal::{
+    Async,
+    uart::{Uart, UartRx, UartTx},
+};
 
 pub const READ_BUF_SIZE: usize = 64;
 
@@ -118,19 +121,21 @@ impl fmt::Debug for State {
 pub async fn config_init(
     spawner: Spawner,
     config_menu: &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>,
-    rx: UartRx<'static, Async>,
+    mut rx: UartRx<'static, Async>,
+    mut tx: UartTx<'static, Async>,
 ) {
-    spawner.spawn(run_config_menu(config_menu, rx)).ok();
+    spawner.spawn(run_config_menu(config_menu, rx, tx)).ok();
 }
 
 #[embassy_executor::task]
 async fn run_config_menu(
     config_menu: &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>,
     mut rx: UartRx<'static, Async>,
+    mut tx: UartTx<'static, Async>,
 ) {
     let mut state = State::Idle(config_menu);
     loop {
-        if let Ok(line) = get_line::<32>(&mut rx).await {
+        if let Ok(line) = get_line::<32>(&mut rx, &mut tx).await {
             state = state.got_line(line.as_str()).await;
             state.run_state().await;
         }
@@ -139,6 +144,7 @@ async fn run_config_menu(
 
 async fn get_line<const SZ: usize>(
     rx: &mut UartRx<'static, Async>,
+    tx: &mut UartTx<'static, Async>,
 ) -> Result<heapless::String<SZ>, ()> {
     let mut buf: [u8; 1] = [0; 1];
     let mut line = heapless::String::<SZ>::new();
@@ -149,6 +155,9 @@ async fn get_line<const SZ: usize>(
                 if len < 1 {
                     continue;
                 }
+
+                let _ = tx.write_async(&buf).await;
+                let _ = tx.flush_async().await;
                 if buf[0] == 13 {
                     return Ok(line);
                 }

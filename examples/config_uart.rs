@@ -51,7 +51,7 @@ async fn main(spawner: Spawner) {
         .with_tx(tx_pin)
         .with_rx(rx_pin)
         .into_async();
-    let (uart_rx, _) = uart0.split();
+    let (uart_rx, uart_tx) = uart0.split();
     Timer::after(Duration::from_millis(100)).await;
 
     // setup config menu
@@ -68,5 +68,5 @@ async fn main(spawner: Spawner) {
     );
 
     // start config menu
-    config_init(spawner, config_menu, uart_rx).await;
+    config_init(spawner, config_menu, uart_rx, uart_tx).await;
 }
