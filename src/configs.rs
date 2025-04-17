@@ -27,6 +27,15 @@ impl<'a> ConfigMenu<'a> {
         }
     }
 
+    pub fn get_entry(&self, name: &str) -> Result<&ConfigEntry, ()> {
+        for entry in self.entries.iter() {
+            if entry.check_name(name) {
+                return Ok(&entry);
+            }
+        }
+        Err(())
+    }
+
     pub fn store_entry(&mut self, name: &str, input: &str) -> Result<(), ()> {
         for entry in self.entries.iter() {
             if entry.check_name(name) {
@@ -55,14 +64,18 @@ pub struct ConfigEntry<'a> {
     pub name: &'a str,
     pub n_blocks: usize, // number of blocks of 16 bytes
     pub offset: u32,
+    pub question: &'a str,
+    pub secret: bool,
 }
 
 impl<'a> ConfigEntry<'a> {
-    pub fn new(name: &'a str, max_len: usize) -> Self {
+    pub fn new(name: &'a str, max_len: usize, question: &'a str, secret: bool) -> Self {
         Self {
             name,
             n_blocks: max_len.div_ceil(16),
             offset: 0,
+            question,
+            secret,
         }
     }
 

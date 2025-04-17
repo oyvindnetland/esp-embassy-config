@@ -60,8 +60,8 @@ async fn main(spawner: Spawner) {
     let entries = &mut *mk_static!(
         [ConfigEntry; 2],
         [
-            ConfigEntry::new("value", 16),
-            ConfigEntry::new("long_value", 32),
+            ConfigEntry::new("value", 16, "What is this value?", false),
+            ConfigEntry::new("long_value", 32, "What is this other value?", true),
         ]
     );
     let config_menu = &*mk_static!(

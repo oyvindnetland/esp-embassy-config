@@ -52,9 +52,9 @@ impl State {
             },
             State::ListValues(menu) => return State::Menu(menu),
             State::SelectChange(menu) => {
-                let mut str = heapless::String::<32>::new();
-                let _ = str.push_str(line);
-                return State::NewValue(menu, str);
+                let mut name = heapless::String::<32>::new();
+                let _ = name.push_str(line);
+                return State::NewValue(menu, name);
             }
             State::NewValue(menu, value) => {
                 let mut unlocked = menu.lock().await;
@@ -103,7 +103,14 @@ impl State {
                     } else {
                         println!(
                             "{}: Value: {} size: {}: {}",
-                            cnt, entry.name, entry.n_blocks, output
+                            cnt,
+                            entry.name,
+                            entry.n_blocks,
+                            if entry.secret {
+                                "********"
+                            } else {
+                                output.as_str()
+                            },
                         );
                     }
                     cnt += 1;
@@ -114,13 +121,31 @@ impl State {
             State::SelectChange(_) => {
                 println!("Select entry name:");
             }
-            State::NewValue(_, entry) => {
-                println!("Set new value for {}:", entry);
+            State::NewValue(menu, name) => {
+                let mut unlocked = menu.lock().await;
+                match unlocked.get_entry(name) {
+                    Ok(entry) => {
+                        println!("Update entry {}: {}", entry.name, entry.question);
+                    }
+                    Err(_) => {
+                        println!("Entry not found: {}", name);
+                    }
+                }
             }
             State::ConfirmingReset(menu) => {
                 println!("Confirm flash reset with 'y':");
             }
         }
+    }
+
+    async fn secret_echo(&self) -> bool {
+        if let State::NewValue(menu, name) = self {
+            let mut unlocked = menu.lock().await;
+            if let Ok(entry) = unlocked.get_entry(name) {
+                return entry.secret;
+            }
+        }
+        false
     }
 }
 
@@ -156,7 +181,8 @@ async fn run_config_menu(
 ) {
     let mut state = State::Idle(config_menu);
     loop {
-        if let Ok(line) = get_line::<32>(&mut rx, &mut tx).await {
+        let secret_echo = state.secret_echo().await;
+        if let Ok(line) = get_line::<32>(&mut rx, &mut tx, secret_echo).await {
             state = state.got_line(line.as_str()).await;
             state.run_state().await;
         }
@@ -166,6 +192,7 @@ async fn run_config_menu(
 async fn get_line<const SZ: usize>(
     rx: &mut UartRx<'static, Async>,
     tx: &mut UartTx<'static, Async>,
+    secret_echo: bool,
 ) -> Result<heapless::String<SZ>, ()> {
     let mut buf: [u8; 1] = [0; 1];
     let mut line = heapless::String::<SZ>::new();
@@ -177,11 +204,18 @@ async fn get_line<const SZ: usize>(
                     continue;
                 }
 
-                let _ = tx.write_async(&buf).await;
-                let _ = tx.flush_async().await;
                 if buf[0] == 13 {
+                    let _ = tx.write_async(&buf).await;
+                    let _ = tx.flush_async().await;
                     return Ok(line);
                 }
+
+                if secret_echo {
+                    let _ = tx.write_async("*".as_bytes()).await;
+                } else {
+                    let _ = tx.write_async(&buf).await;
+                }
+                let _ = tx.flush_async().await;
 
                 let _ = line.push(buf[0] as char);
                 if line.len() == SZ {

@@ -61,15 +61,15 @@ async fn main(spawner: Spawner) {
         .with_tx(tx_pin)
         .with_rx(rx_pin)
         .into_async();
-    let (uart_rx, _) = uart0.split();
+    let (uart_rx, uart_tx) = uart0.split();
     Timer::after(Duration::from_millis(100)).await;
 
     // setup config menu
     let entries = &mut *mk_static!(
         [ConfigEntry; 2],
         [
-            ConfigEntry::new("wifi_ssid", 32),
-            ConfigEntry::new("wifi_pass", 64),
+            ConfigEntry::new("wifi_ssid", 32, "What is the wifi SSID?", false),
+            ConfigEntry::new("wifi_pass", 64, "What is the wifi password?", true),
         ]
     );
     let config_menu = &*mk_static!(
@@ -78,7 +78,7 @@ async fn main(spawner: Spawner) {
     );
 
     // start config menu
-    config_init(spawner, config_menu, uart_rx).await;
+    config_init(spawner, config_menu, uart_rx, uart_tx).await;
 
     // setup wifi
     let mut unlocked = config_menu.lock().await;
