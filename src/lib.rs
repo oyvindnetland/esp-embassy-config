@@ -4,7 +4,7 @@ pub mod configs;
 pub mod key;
 
 use configs::ConfigMenu;
-use core::fmt;
+use core::{f32::consts::E, fmt};
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
@@ -26,6 +26,7 @@ enum State {
         &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>,
         heapless::String<32>,
     ),
+    ConfirmingReset(&'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>),
 }
 
 impl State {
@@ -44,6 +45,9 @@ impl State {
                     println!("List values:");
                     return State::SelectChange(menu);
                 }
+                "3" => {
+                    return State::ConfirmingReset(menu);
+                }
                 _ => return State::Idle(menu),
             },
             State::ListValues(menu) => return State::Menu(menu),
@@ -55,6 +59,16 @@ impl State {
             State::NewValue(menu, value) => {
                 let mut unlocked = menu.lock().await;
                 let _ = unlocked.store_entry(value, line);
+                return State::Menu(menu);
+            }
+            State::ConfirmingReset(menu) => {
+                if line.starts_with("y") {
+                    info!("Reset flash storage");
+                    let mut unlocked = menu.lock().await;
+                    for entry in unlocked.entries.iter() {
+                        let _ = unlocked.store_entry(entry.name, "");
+                    }
+                }
                 return State::Menu(menu);
             }
         }
@@ -70,6 +84,7 @@ impl State {
                 println!("Config menu, select option:");
                 println!("1: list values");
                 println!("2: update value");
+                println!("3: reset flash storage (useful if changing key)");
                 println!("other: exit menu");
                 println!("---------------------------");
                 println!("");
@@ -102,6 +117,9 @@ impl State {
             State::NewValue(_, entry) => {
                 println!("Set new value for {}:", entry);
             }
+            State::ConfirmingReset(menu) => {
+                println!("Confirm flash reset with 'y':");
+            }
         }
     }
 }
@@ -117,6 +135,7 @@ impl fmt::Debug for State {
                 .debug_struct("State::NewValue")
                 .field("entry", entry)
                 .finish(),
+            State::ConfirmingReset(_) => f.debug_struct("State::ConfirmingReset").finish(),
         }
     }
 }
