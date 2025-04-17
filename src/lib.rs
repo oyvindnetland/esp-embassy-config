@@ -20,13 +20,42 @@ pub const READ_BUF_SIZE: usize = 64;
 enum State {
     Idle(&'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>),
     Menu(&'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>),
-    ListValues(&'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>),
     SelectChange(&'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>),
     NewValue(
         &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>,
         heapless::String<32>,
     ),
     ConfirmingReset(&'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>),
+}
+
+async fn list_entries(menu: &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>) {
+    println!("---------------------------");
+    println!("List entries:");
+    let mut unlocked = menu.lock().await;
+    let mut cnt = 0;
+    for entry in unlocked.entries.iter() {
+        //let mut output = heapless::String::<{ value.n_blocks }>::new();
+        let mut output = heapless::String::<32>::new();
+        let v = unlocked.read_entry(entry.name, &mut output);
+        if v.is_err() {
+            let _ = output.push_str("-read failure-");
+        } else {
+            println!(
+                "{}: Entry: {} size: {}: {}",
+                cnt,
+                entry.name,
+                16 * entry.n_blocks,
+                if entry.secret {
+                    "********"
+                } else {
+                    output.as_str()
+                },
+            );
+        }
+        cnt += 1;
+    }
+    println!("---------------------------");
+    println!("");
 }
 
 impl State {
@@ -40,7 +69,10 @@ impl State {
                 return State::Idle(menu);
             }
             State::Menu(menu) => match line {
-                "1" => return State::ListValues(menu),
+                "1" => {
+                    list_entries(&menu).await;
+                    return State::Menu(menu);
+                }
                 "2" => {
                     println!("List values:");
                     return State::SelectChange(menu);
@@ -50,7 +82,6 @@ impl State {
                 }
                 _ => return State::Idle(menu),
             },
-            State::ListValues(menu) => return State::Menu(menu),
             State::SelectChange(menu) => {
                 let mut name = heapless::String::<32>::new();
                 let _ = name.push_str(line);
@@ -82,39 +113,10 @@ impl State {
             State::Menu(_) => {
                 println!("---------------------------");
                 println!("Config menu, select option:");
-                println!("1: list values");
+                println!("1: list entries");
                 println!("2: update value");
                 println!("3: reset flash storage (useful if changing key)");
                 println!("other: exit menu");
-                println!("---------------------------");
-                println!("");
-            }
-            State::ListValues(menu) => {
-                println!("---------------------------");
-                println!("List values:");
-                let mut unlocked = menu.lock().await;
-                let mut cnt = 0;
-                for entry in unlocked.entries.iter() {
-                    //let mut output = heapless::String::<{ value.n_blocks }>::new();
-                    let mut output = heapless::String::<32>::new();
-                    let v = unlocked.read_entry(entry.name, &mut output);
-                    if v.is_err() {
-                        let _ = output.push_str("-read failure-");
-                    } else {
-                        println!(
-                            "{}: Value: {} size: {}: {}",
-                            cnt,
-                            entry.name,
-                            entry.n_blocks,
-                            if entry.secret {
-                                "********"
-                            } else {
-                                output.as_str()
-                            },
-                        );
-                    }
-                    cnt += 1;
-                }
                 println!("---------------------------");
                 println!("");
             }
@@ -154,7 +156,6 @@ impl fmt::Debug for State {
         match self {
             State::Idle(_) => f.debug_struct("State::Idle").finish(),
             State::Menu(_) => f.debug_struct("State::Menu").finish(),
-            State::ListValues(_) => f.debug_struct("State::ListValues").finish(),
             State::SelectChange(_) => f.debug_struct("State::SelectChange").finish(),
             State::NewValue(_, entry) => f
                 .debug_struct("State::NewValue")
