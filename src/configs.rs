@@ -2,7 +2,6 @@ use embedded_storage::ReadStorage;
 use embedded_storage::Storage;
 use esp_hal::aes::{Aes, Key, Mode};
 use esp_storage::FlashStorage;
-use log::info;
 
 pub struct ConfigMenu<'a> {
     pub entries: &'a [ConfigEntry<'a>],

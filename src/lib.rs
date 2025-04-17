@@ -4,13 +4,13 @@ pub mod configs;
 pub mod key;
 
 use configs::ConfigMenu;
-use core::{f32::consts::E, fmt};
+use core::fmt;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use esp_hal::{
     Async,
-    uart::{Uart, UartRx, UartTx},
+    uart::{UartRx, UartTx},
 };
 use esp_println::println;
 use log::info;
@@ -124,7 +124,7 @@ impl State {
                 println!("Select entry name:");
             }
             State::NewValue(menu, name) => {
-                let mut unlocked = menu.lock().await;
+                let unlocked = menu.lock().await;
                 match unlocked.get_entry(name) {
                     Ok(entry) => {
                         println!("Update entry {}: {}", entry.name, entry.question);
@@ -134,7 +134,7 @@ impl State {
                     }
                 }
             }
-            State::ConfirmingReset(menu) => {
+            State::ConfirmingReset(_) => {
                 println!("Confirm flash reset with 'y':");
             }
         }
@@ -142,7 +142,7 @@ impl State {
 
     async fn secret_echo(&self) -> bool {
         if let State::NewValue(menu, name) = self {
-            let mut unlocked = menu.lock().await;
+            let unlocked = menu.lock().await;
             if let Ok(entry) = unlocked.get_entry(name) {
                 return entry.secret;
             }
@@ -168,8 +168,8 @@ impl fmt::Debug for State {
 pub async fn config_init(
     spawner: Spawner,
     config_menu: &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'static>>,
-    mut rx: UartRx<'static, Async>,
-    mut tx: UartTx<'static, Async>,
+    rx: UartRx<'static, Async>,
+    tx: UartTx<'static, Async>,
 ) {
     spawner.spawn(run_config_menu(config_menu, rx, tx)).ok();
 }
