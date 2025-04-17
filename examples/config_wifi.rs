@@ -22,19 +22,11 @@ use esp_hal::{
     uart::{Config, Uart},
 };
 use log::{error, info};
+use static_cell::StaticCell;
 
 pub const READ_BUF_SIZE: usize = 64;
 
 const STORAGE_KEY: &str = env!("STORAGE_KEY");
-
-macro_rules! mk_static {
-    ($t:ty,$val:expr) => {{
-        static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
-        #[deny(unused_attributes)]
-        let x = STATIC_CELL.uninit().write(($val));
-        x
-    }};
-}
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
@@ -65,17 +57,13 @@ async fn main(spawner: Spawner) {
     Timer::after(Duration::from_millis(100)).await;
 
     // setup config menu
-    let entries = &mut *mk_static!(
-        [ConfigEntry; 2],
-        [
-            ConfigEntry::new("wifi_ssid", 32, "What is the wifi SSID?", false),
-            ConfigEntry::new("wifi_pass", 64, "What is the wifi password?", true),
-        ]
-    );
-    let config_menu = &*mk_static!(
-        Mutex<CriticalSectionRawMutex, ConfigMenu>,
-        Mutex::new(ConfigMenu::new(entries, encoded_key, aes))
-    );
+    static ENTRIES: StaticCell<[ConfigEntry; 2]> = StaticCell::new();
+    static CONFIG_MENU: StaticCell<Mutex<CriticalSectionRawMutex, ConfigMenu>> = StaticCell::new();
+    let entries = ENTRIES.init([
+        ConfigEntry::new("wifi_ssid", 32, "What is the wifi SSID?", false),
+        ConfigEntry::new("wifi_pass", 64, "What is the wifi password?", true),
+    ]);
+    let config_menu = CONFIG_MENU.init(Mutex::new(ConfigMenu::new(entries, encoded_key, aes)));
 
     // start config menu
     config_init(spawner, config_menu, uart_rx, uart_tx).await;
