@@ -21,8 +21,7 @@ use esp_hal::{
     timer::timg::TimerGroup,
     uart::{Config, Uart},
 };
-use esp_println::println;
-use log::info;
+use log::{error, info};
 
 pub const READ_BUF_SIZE: usize = 64;
 
@@ -86,7 +85,7 @@ async fn main(spawner: Spawner) {
     let mut ssid = heapless::String::<32>::new();
     let res = unlocked.read_entry("wifi_ssid", &mut ssid);
     if res.is_err() {
-        esp_println::println!("Wifi SSID not set");
+        error!("Wifi SSID not set");
         loop {
             Timer::after(Duration::from_millis(1000)).await;
         }
@@ -95,7 +94,7 @@ async fn main(spawner: Spawner) {
     let mut pass = heapless::String::<64>::new();
     let res = unlocked.read_entry("wifi_pass", &mut pass);
     if res.is_err() {
-        esp_println::println!("Wifi pass not set");
+        error!("Wifi pass not set");
         loop {
             Timer::after(Duration::from_millis(1000)).await;
         }

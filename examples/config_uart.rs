@@ -17,6 +17,7 @@ use esp_hal::{
     timer::timg::TimerGroup,
     uart::{Config, Uart},
 };
+use log::info;
 
 pub const READ_BUF_SIZE: usize = 64;
 
@@ -34,6 +35,7 @@ macro_rules! mk_static {
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
     // setup embassy
+    esp_println::logger::init_logger_from_env();
     let peripherals = esp_hal::init(esp_hal::Config::default());
     let timg0 = TimerGroup::new(peripherals.TIMG0);
     esp_hal_embassy::init(timg0.timer0);
@@ -68,5 +70,6 @@ async fn main(spawner: Spawner) {
     );
 
     // start config menu
+    info!("Starting config menu");
     config_init(spawner, config_menu, uart_rx, uart_tx).await;
 }

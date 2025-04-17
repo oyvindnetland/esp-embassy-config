@@ -12,6 +12,8 @@ use esp_hal::{
     Async,
     uart::{Uart, UartRx, UartTx},
 };
+use esp_println::println;
+use log::info;
 
 pub const READ_BUF_SIZE: usize = 64;
 
@@ -31,6 +33,7 @@ impl State {
         match self {
             State::Idle(menu) => {
                 if line.len() >= 1 && line.starts_with("m") {
+                    info!("Enter menu");
                     return State::Menu(menu);
                 }
                 return State::Idle(menu);
@@ -38,7 +41,7 @@ impl State {
             State::Menu(menu) => match line {
                 "1" => return State::ListValues(menu),
                 "2" => {
-                    esp_println::println!("List values:");
+                    println!("List values:");
                     return State::SelectChange(menu);
                 }
                 _ => return State::Idle(menu),
@@ -59,19 +62,21 @@ impl State {
 
     async fn run_state(&self) {
         match self {
-            State::Idle(_) => {}
+            State::Idle(_) => {
+                info!("Exit menu");
+            }
             State::Menu(_) => {
-                esp_println::println!("---------------------------");
-                esp_println::println!("Config menu, select option:");
-                esp_println::println!("1: list values");
-                esp_println::println!("2: update value");
-                esp_println::println!("other: exit menu");
-                esp_println::println!("---------------------------");
-                esp_println::println!("");
+                println!("---------------------------");
+                println!("Config menu, select option:");
+                println!("1: list values");
+                println!("2: update value");
+                println!("other: exit menu");
+                println!("---------------------------");
+                println!("");
             }
             State::ListValues(menu) => {
-                esp_println::println!("---------------------------");
-                esp_println::println!("List values:");
+                println!("---------------------------");
+                println!("List values:");
                 let mut unlocked = menu.lock().await;
                 let mut cnt = 0;
                 for entry in unlocked.entries.iter() {
@@ -81,24 +86,21 @@ impl State {
                     if v.is_err() {
                         let _ = output.push_str("-read failure-");
                     } else {
-                        esp_println::println!(
+                        println!(
                             "{}: Value: {} size: {}: {}",
-                            cnt,
-                            entry.name,
-                            entry.n_blocks,
-                            output
+                            cnt, entry.name, entry.n_blocks, output
                         );
                     }
                     cnt += 1;
                 }
-                esp_println::println!("---------------------------");
-                esp_println::println!("");
+                println!("---------------------------");
+                println!("");
             }
             State::SelectChange(_) => {
-                esp_println::println!("Select entry name:");
+                println!("Select entry name:");
             }
             State::NewValue(_, entry) => {
-                esp_println::println!("Set new value for {}:", entry);
+                println!("Set new value for {}:", entry);
             }
         }
     }
@@ -164,7 +166,7 @@ async fn get_line<const SZ: usize>(
 
                 let _ = line.push(buf[0] as char);
                 if line.len() == SZ {
-                    esp_println::println!("Reached {} characters", SZ);
+                    info!("Reached {} characters", SZ);
                     return Ok(line);
                 }
             }
