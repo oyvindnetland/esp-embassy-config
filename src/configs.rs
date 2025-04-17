@@ -26,6 +26,13 @@ impl<'a> ConfigMenu<'a> {
         }
     }
 
+    pub fn get_entry_index(&self, index: usize) -> Result<&ConfigEntry, ()> {
+        if index >= self.entries.len() {
+            return Err(());
+        }
+        Ok(&self.entries[index])
+    }
+
     pub fn get_entry(&self, name: &str) -> Result<&ConfigEntry, ()> {
         for entry in self.entries.iter() {
             if entry.check_name(name) {

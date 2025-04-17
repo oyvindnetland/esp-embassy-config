@@ -72,6 +72,14 @@ impl MenuState {
             },
             MenuState::SelectChange(menu) => {
                 let mut name = heapless::String::<32>::new();
+                if let Ok(index) = line.parse::<usize>() {
+                    let unlocked = menu.lock().await;
+                    let entry = unlocked.get_entry_index(index);
+                    if entry.is_ok() {
+                        let _ = name.push_str(entry.unwrap().name);
+                        return MenuState::NewValue(menu, name);
+                    }
+                }
                 let _ = name.push_str(line);
                 return MenuState::NewValue(menu, name);
             }
