@@ -2,6 +2,7 @@ use embedded_storage::ReadStorage;
 use embedded_storage::Storage;
 use esp_hal::aes::{Aes, Key, Mode};
 use esp_storage::FlashStorage;
+use log::info;
 
 pub struct ConfigMenu<'a> {
     pub entries: &'a [ConfigEntry<'a>],
@@ -87,7 +88,12 @@ impl<'a> ConfigEntry<'a> {
             if end > value.len() {
                 end = value.len();
             }
-            let sub_str = &value[start..end];
+
+            let sub_str = if start >= value.len() {
+                ""
+            } else {
+                &value[start..end]
+            };
 
             let mut block = [0_u8; 16];
             block[..sub_str.len()].copy_from_slice(sub_str.as_bytes());
