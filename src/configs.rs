@@ -156,13 +156,23 @@ impl<'a> ConfigEntry<'a> {
     }
 
     pub fn print(&self, cnt: i32, output: &str) {
-        println!(
-            "{}: Entry: {} size: {}: {}",
-            cnt,
-            self.name,
-            16 * self.n_blocks,
-            if self.secret { "********" } else { output },
-        );
+        if self.secret {
+            println!(
+                "{}: Entry: {} size: -/{}: ********",
+                cnt,
+                self.name,
+                16 * self.n_blocks
+            );
+        } else {
+            println!(
+                "{}: Entry: {} size: {}/{}: {}",
+                cnt,
+                self.name,
+                output.len(),
+                16 * self.n_blocks,
+                output,
+            );
+        }
     }
 
     fn check_name(&self, name: &str) -> bool {
