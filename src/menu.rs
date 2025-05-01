@@ -54,30 +54,48 @@ async fn list_entries(menu: &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'
     println!("");
 }
 
+fn print_menu() {
+    println!("---------------------------");
+    println!("Config menu, select option:");
+    println!("1: show menu");
+    println!("2: list entries");
+    println!("3: update value");
+    println!("4: reset flash storage (useful if changing key)");
+    #[cfg(feature = "wifi")]
+    println!("5: Connect to wifi");
+    println!("other: exit menu");
+    println!("---------------------------");
+    println!("");
+}
+
 impl MenuState {
     pub async fn got_line(&self, line: &str) -> Self {
         match self {
             MenuState::Idle(menu) => {
                 if line.len() >= 1 && line.starts_with("m") {
-                    info!("Enter menu");
+                    print_menu();
                     return MenuState::Menu(menu);
                 }
                 return MenuState::Idle(menu);
             }
             MenuState::Menu(menu) => match line {
                 "1" => {
-                    list_entries(&menu).await;
+                    print_menu();
                     return MenuState::Menu(menu);
                 }
                 "2" => {
+                    list_entries(&menu).await;
+                    return MenuState::Menu(menu);
+                }
+                "3" => {
                     println!("List values:");
                     return MenuState::SelectChange(menu);
                 }
-                "3" => {
+                "4" => {
                     return MenuState::ConfirmingReset(menu);
                 }
                 #[cfg(feature = "wifi")]
-                "4" => {
+                "5" => {
                     let mut client_config = ClientConfiguration::default();
 
                     let mut unlocked = menu.lock().await;
@@ -134,18 +152,7 @@ impl MenuState {
             MenuState::Idle(_) => {
                 info!("Exit menu");
             }
-            MenuState::Menu(_) => {
-                println!("---------------------------");
-                println!("Config menu, select option:");
-                println!("1: list entries");
-                println!("2: update value");
-                println!("3: reset flash storage (useful if changing key)");
-                #[cfg(feature = "wifi")]
-                println!("4: Connect to wifi");
-                println!("other: exit menu");
-                println!("---------------------------");
-                println!("");
-            }
+            MenuState::Menu(_) => {}
             MenuState::SelectChange(_) => {
                 println!("Select entry name:");
             }
