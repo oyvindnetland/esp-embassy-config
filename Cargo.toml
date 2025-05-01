@@ -38,9 +38,13 @@ embassy-sync = "0.6.1"
 embassy-futures = "0.1.1"
 embassy-embedded-hal = "0.3.0"
 
-[dev-dependencies]
-esp-wifi = { version = "0.12.0", features = ["log", "wifi", "utils"] }
-esp-alloc = "0.6.0"
+# dependencies for wifi feature
+esp-wifi = { version = "0.12.0", features = [
+    "log",
+    "wifi",
+    "utils",
+], optional = true }
+esp-alloc = { version = "0.6.0", optional = true }
 embassy-net = { version = "0.6.0", features = [
     "tcp",
     "udp",
@@ -48,15 +52,25 @@ embassy-net = { version = "0.6.0", features = [
     "dhcpv4",
     "medium-ethernet",
     "proto-ipv4",
-] }
+], optional = true }
 smoltcp = { version = "0.12.0", default-features = false, features = [
     "medium-ethernet",
     "socket-raw",
     "proto-ipv4",
-] }
-esp-embassy-wifihelper = { version = "0.2.2", default-features = false }
+], optional = true }
+esp-embassy-wifihelper = { version = "0.2.3", default-features = false, optional = true }
+
+esp-wifi-sys = { version = "0.7.1", default-features = false, optional = true }
 
 [features]
+wifi = [
+    "dep:esp-wifi",
+    "dep:esp-alloc",
+    "dep:embassy-net",
+    "dep:smoltcp",
+    "dep:esp-embassy-wifihelper",
+]
+
 esp32 = ["esp-hal/esp32", "esp-hal-embassy/esp32", "esp-storage/esp32"]
 esp32c2 = ["esp-hal/esp32c2", "esp-hal-embassy/esp32c2", "esp-storage/esp32c2"]
 esp32c3 = ["esp-hal/esp32c3", "esp-hal-embassy/esp32c3", "esp-storage/esp32c3"]
@@ -72,12 +86,18 @@ esp32example = [
     "esp-println/uart",
     "esp-wifi/esp32",
 ]
+esp32wifiexample = ["esp32example", "wifi", "esp-embassy-wifihelper/esp32"]
 esp32c2example = [
     "esp32c2",
     "esp-backtrace/esp32c2",
     "esp-println/esp32c2",
     "esp-println/uart",
     "esp-wifi/esp32c2",
+]
+esp32c2wifiexample = [
+    "esp32c2example",
+    "wifi",
+    "esp-embassy-wifihelper/esp32c2",
 ]
 esp32c3example = [
     "esp32c3",
@@ -86,12 +106,22 @@ esp32c3example = [
     "esp-println/uart",
     "esp-wifi/esp32c3",
 ]
+esp32c3wifiexample = [
+    "esp32c3example",
+    "wifi",
+    "esp-embassy-wifihelper/esp32c3",
+]
 esp32c6example = [
     "esp32c6",
     "esp-backtrace/esp32c6",
     "esp-println/esp32c6",
     "esp-println/jtag-serial",
     "esp-wifi/esp32c6",
+]
+esp32c6wifiexample = [
+    "esp32c6example",
+    "wifi",
+    "esp-embassy-wifihelper/esp32c6",
 ]
 esp32h2example = [
     "esp32h2",
@@ -100,6 +130,11 @@ esp32h2example = [
     "esp-println/jtag-serial",
     "esp-wifi/esp32h2",
 ]
+esp32h2wifiexample = [
+    "esp32h2example",
+    "wifi",
+    "esp-embassy-wifihelper/esp32h2",
+]
 esp32s2example = [
     "esp32s2",
     "esp-backtrace/esp32s2",
@@ -107,12 +142,22 @@ esp32s2example = [
     "esp-println/uart",
     "esp-wifi/esp32s2",
 ]
+esp32s2wifiexample = [
+    "esp32s2example",
+    "wifi",
+    "esp-embassy-wifihelper/esp32s2",
+]
 esp32s3example = [
     "esp32s3",
     "esp-backtrace/esp32s3",
     "esp-println/esp32s3",
     "esp-println/jtag-serial",
     "esp-wifi/esp32s3",
+]
+esp32s3wifiexample = [
+    "esp32s3example",
+    "wifi",
+    "esp-embassy-wifihelper/esp32s3",
 ]
 
 [[example]]

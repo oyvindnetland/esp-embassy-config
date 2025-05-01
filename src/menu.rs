@@ -3,6 +3,7 @@ use core::fmt;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use esp_println::println;
+use esp_wifi::wifi::ClientConfiguration;
 use log::info;
 
 pub enum MenuState {
@@ -22,25 +23,32 @@ async fn list_entries(menu: &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'
     let mut unlocked = menu.lock().await;
     let mut cnt = 0;
     for entry in unlocked.entries.iter() {
-        //let mut output = heapless::String::<{ value.n_blocks }>::new();
         let mut output = heapless::String::<32>::new();
         let v = unlocked.read_entry(entry.name, &mut output);
         if v.is_err() {
-            let _ = output.push_str("-read failure-");
+            println!("{}: -read failure-", entry.name);
         } else {
-            println!(
-                "{}: Entry: {} size: {}: {}",
-                cnt,
-                entry.name,
-                16 * entry.n_blocks,
-                if entry.secret {
-                    "********"
-                } else {
-                    output.as_str()
-                },
-            );
+            entry.print(cnt, output.as_str());
         }
         cnt += 1;
+    }
+    #[cfg(feature = "wifi")]
+    {
+        let mut output = heapless::String::<32>::new();
+        let name = unlocked.wifi_ssid.name;
+        let v = unlocked.read_entry(name, &mut output);
+        if v.is_err() {
+            println!("wifi_ssid: -read failure- name: {}", name);
+        } else {
+            unlocked.wifi_ssid.print(cnt, output.as_str());
+        }
+        let name = unlocked.wifi_pass.name;
+        let v = unlocked.read_entry(name, &mut output);
+        if v.is_err() {
+            println!("wifi_pass: -read failure-");
+        } else {
+            unlocked.wifi_pass.print(cnt + 1, output.as_str());
+        }
     }
     println!("---------------------------");
     println!("");
@@ -67,6 +75,26 @@ impl MenuState {
                 }
                 "3" => {
                     return MenuState::ConfirmingReset(menu);
+                }
+                #[cfg(feature = "wifi")]
+                "4" => {
+                    let mut client_config = ClientConfiguration::default();
+
+                    let mut unlocked = menu.lock().await;
+                    let res = unlocked.read_entry("wifi_ssid", &mut client_config.ssid);
+                    if res.is_err() {
+                        println!("Failed to connect to wifi, no SSID set");
+                        return MenuState::Menu(menu);
+                    }
+                    let res = unlocked.read_entry("wifi_pass", &mut client_config.password);
+                    if res.is_err() {
+                        println!("Failed to connect to wifi, no Pass set");
+                        return MenuState::Menu(menu);
+                    }
+
+                    unlocked.wifi_sender.send(client_config).await;
+
+                    return MenuState::Menu(menu);
                 }
                 _ => return MenuState::Idle(menu),
             },
@@ -112,6 +140,8 @@ impl MenuState {
                 println!("1: list entries");
                 println!("2: update value");
                 println!("3: reset flash storage (useful if changing key)");
+                #[cfg(feature = "wifi")]
+                println!("4: Connect to wifi");
                 println!("other: exit menu");
                 println!("---------------------------");
                 println!("");

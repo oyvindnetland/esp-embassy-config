@@ -1,25 +1,58 @@
+#[cfg(feature = "wifi")]
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Sender;
 use embedded_storage::ReadStorage;
 use embedded_storage::Storage;
 use esp_hal::aes::{Aes, Key, Mode};
+use esp_println::println;
 use esp_storage::FlashStorage;
+#[cfg(feature = "wifi")]
+use esp_wifi::wifi::ClientConfiguration;
 
 pub struct ConfigMenu<'a> {
     pub entries: &'a [ConfigEntry<'a>],
+    #[cfg(feature = "wifi")]
+    pub wifi_ssid: ConfigEntry<'a>,
+    #[cfg(feature = "wifi")]
+    pub wifi_pass: ConfigEntry<'a>,
+    #[cfg(feature = "wifi")]
+    pub wifi_sender: Sender<'static, CriticalSectionRawMutex, ClientConfiguration, 1>,
     key: [u8; 16],
     aes: Aes<'a>,
     storage: FlashStorage,
 }
 
 impl<'a> ConfigMenu<'a> {
-    pub fn new(values: &'a mut [ConfigEntry<'a>], key: [u8; 16], aes: Aes<'a>) -> Self {
+    pub fn new(
+        values: &'a mut [ConfigEntry<'a>],
+        key: [u8; 16],
+        aes: Aes<'a>,
+        #[cfg(feature = "wifi")] wifi_sender: Sender<
+            'static,
+            CriticalSectionRawMutex,
+            ClientConfiguration,
+            1,
+        >,
+    ) -> Self {
         let mut offset = 0;
         for value in values.iter_mut() {
             value.offset = offset;
             offset += 16 * (value.n_blocks as u32);
         }
 
+        let mut wifi_ssid = ConfigEntry::new("wifi_ssid", 32, "Wifi SSID", false);
+        wifi_ssid.offset = offset;
+        let mut wifi_pass = ConfigEntry::new("wifi_pass", 64, "Wifi Password", true);
+        wifi_pass.offset = offset + 32;
+
         Self {
             entries: values,
+            #[cfg(feature = "wifi")]
+            wifi_ssid,
+            #[cfg(feature = "wifi")]
+            wifi_pass,
+            #[cfg(feature = "wifi")]
+            wifi_sender,
             key,
             aes,
             storage: FlashStorage::new(),
@@ -39,6 +72,16 @@ impl<'a> ConfigMenu<'a> {
                 return Ok(&entry);
             }
         }
+
+        #[cfg(feature = "wifi")]
+        {
+            if name == "wifi_ssid" {
+                return Ok(&self.wifi_ssid);
+            }
+            if name == "wifi_pass" {
+                return Ok(&self.wifi_pass);
+            }
+        }
         Err(())
     }
 
@@ -48,6 +91,19 @@ impl<'a> ConfigMenu<'a> {
                 return entry.store(&self.key, &mut self.aes, &mut self.storage, input);
             }
         }
+        #[cfg(feature = "wifi")]
+        if name == "wifi_ssid" {
+            return self
+                .wifi_ssid
+                .store(&self.key, &mut self.aes, &mut self.storage, input);
+        }
+        #[cfg(feature = "wifi")]
+        if name == "wifi_pass" {
+            return self
+                .wifi_pass
+                .store(&self.key, &mut self.aes, &mut self.storage, input);
+        }
+
         Err(())
     }
 
@@ -59,6 +115,20 @@ impl<'a> ConfigMenu<'a> {
         for value in self.entries.iter() {
             if value.check_name(name) {
                 return value.read(&self.key, &mut self.aes, &mut self.storage, output);
+            }
+        }
+
+        #[cfg(feature = "wifi")]
+        {
+            if name == "wifi_ssid" {
+                return self
+                    .wifi_ssid
+                    .read(&self.key, &mut self.aes, &mut self.storage, output);
+            }
+            if name == "wifi_pass" {
+                return self
+                    .wifi_pass
+                    .read(&self.key, &mut self.aes, &mut self.storage, output);
             }
         }
         Err(())
@@ -83,6 +153,16 @@ impl<'a> ConfigEntry<'a> {
             question,
             secret,
         }
+    }
+
+    pub fn print(&self, cnt: i32, output: &str) {
+        println!(
+            "{}: Entry: {} size: {}: {}",
+            cnt,
+            self.name,
+            16 * self.n_blocks,
+            if self.secret { "********" } else { output },
+        );
     }
 
     fn check_name(&self, name: &str) -> bool {

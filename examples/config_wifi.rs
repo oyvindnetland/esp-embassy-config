@@ -2,9 +2,8 @@
 #![no_main]
 
 use embassy_executor::Spawner;
-use embassy_net::dns::DnsQueryType;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::{Duration, Timer};
 use esp_alloc as _;
 use esp_backtrace as _;
@@ -21,7 +20,8 @@ use esp_hal::{
     timer::timg::TimerGroup,
     uart::{Config, Uart},
 };
-use log::{error, info};
+use esp_wifi::wifi::ClientConfiguration;
+use log::info;
 use static_cell::StaticCell;
 
 pub const READ_BUF_SIZE: usize = 64;
@@ -56,48 +56,34 @@ async fn main(spawner: Spawner) {
     let (uart_rx, uart_tx) = uart0.split();
     Timer::after(Duration::from_millis(100)).await;
 
-    // setup config menu
-    static ENTRIES: StaticCell<[ConfigEntry; 2]> = StaticCell::new();
-    static CONFIG_MENU: StaticCell<Mutex<CriticalSectionRawMutex, ConfigMenu>> = StaticCell::new();
-    let entries = ENTRIES.init([
-        ConfigEntry::new("wifi_ssid", 32, "What is the wifi SSID?", false),
-        ConfigEntry::new("wifi_pass", 64, "What is the wifi password?", true),
-    ]);
-    let config_menu = CONFIG_MENU.init(Mutex::new(ConfigMenu::new(entries, encoded_key, aes)));
-
-    // start config menu
-    config_init(spawner, config_menu, uart_rx, uart_tx).await;
-
     // setup wifi
-    let mut unlocked = config_menu.lock().await;
-    let mut ssid = heapless::String::<32>::new();
-    let res = unlocked.read_entry("wifi_ssid", &mut ssid);
-    if res.is_err() {
-        error!("Wifi SSID not set");
-        loop {
-            Timer::after(Duration::from_millis(1000)).await;
-        }
-    }
+    static WIFI_CHANNEL: StaticCell<Channel<CriticalSectionRawMutex, ClientConfiguration, 1>> =
+        StaticCell::new();
+    let wifi_channel = WIFI_CHANNEL.init(Channel::new());
 
-    let mut pass = heapless::String::<64>::new();
-    let res = unlocked.read_entry("wifi_pass", &mut pass);
-    if res.is_err() {
-        error!("Wifi pass not set");
-        loop {
-            Timer::after(Duration::from_millis(1000)).await;
-        }
-    }
-    drop(unlocked);
+    // setup config menu
+    static ENTRIES: StaticCell<[ConfigEntry; 1]> = StaticCell::new();
+    static CONFIG_MENU: StaticCell<Mutex<CriticalSectionRawMutex, ConfigMenu>> = StaticCell::new();
+    let entries = ENTRIES.init([ConfigEntry::new("test", 32, "Test test?", false)]);
+    let config_menu = CONFIG_MENU.init(Mutex::new(ConfigMenu::new(
+        entries,
+        encoded_key,
+        aes,
+        wifi_channel.sender(),
+    )));
 
-    let wifi = WifiStack::new(
+    let wifi = WifiStack::new_connect_later(
         spawner,
         peripherals.WIFI,
         peripherals.TIMG0,
         peripherals.RNG,
         peripherals.RADIO_CLK,
-        ssid,
-        pass,
+        wifi_channel.receiver(),
     );
+
+    // start config menu
+    config_init(spawner, config_menu, uart_rx, uart_tx).await;
+    info!("config started");
 
     let config = wifi.wait_for_connected().await.unwrap();
     info!("Wifi connected with IP: {}", config.address);

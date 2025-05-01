@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.cargo.features": [
+        "esp32c3example",
+        "wifi"
+    ]
+}
