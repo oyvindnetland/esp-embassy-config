@@ -16,6 +16,8 @@ pub struct ConfigMenu<'a> {
     #[cfg(feature = "wifi")]
     pub wifi_pass: ConfigEntry<'a>,
     #[cfg(feature = "wifi")]
+    pub wifi_autostart: ConfigEntry<'a>,
+    #[cfg(feature = "wifi")]
     pub wifi_sender: Sender<'static, CriticalSectionRawMutex, ClientConfiguration, 1>,
     key: [u8; 16],
     aes: Aes<'a>,
@@ -44,8 +46,15 @@ impl<'a> ConfigMenu<'a> {
         wifi_ssid.offset = offset;
         let mut wifi_pass = ConfigEntry::new("wifi_pass", 64, "Wifi Password", true);
         wifi_pass.offset = offset + 32;
+        let mut wifi_autostart = ConfigEntry::new(
+            "wifi_autostart",
+            32,
+            "Set to 'yes' if wifi should be connected automatically at boot",
+            false,
+        );
+        wifi_autostart.offset = offset + 32 + 64;
 
-        Self {
+        let mut config_menu = Self {
             entries: values,
             #[cfg(feature = "wifi")]
             wifi_ssid,
@@ -53,9 +62,52 @@ impl<'a> ConfigMenu<'a> {
             wifi_pass,
             #[cfg(feature = "wifi")]
             wifi_sender,
+            #[cfg(feature = "wifi")]
+            wifi_autostart,
             key,
             aes,
             storage: FlashStorage::new(),
+        };
+        config_menu
+    }
+
+    #[cfg(feature = "wifi")]
+    pub async fn autostart_wifi(&mut self) {
+        use embassy_time::{Duration, Timer};
+
+        let mut autostart = heapless::String::<32>::new();
+        if let Ok(_) =
+            self.wifi_autostart
+                .read(&self.key, &mut self.aes, &mut self.storage, &mut autostart)
+        {
+            if autostart == "yes" {
+                let mut ok = true;
+
+                let mut ssid = heapless::String::<32>::new();
+                if let Err(_) =
+                    self.wifi_ssid
+                        .read(&self.key, &mut self.aes, &mut self.storage, &mut ssid)
+                {
+                    ok = false;
+                }
+
+                let mut pass = heapless::String::<64>::new();
+                if let Err(_) =
+                    self.wifi_pass
+                        .read(&self.key, &mut self.aes, &mut self.storage, &mut pass)
+                {
+                    ok = false;
+                }
+
+                if ok {
+                    let client_config = ClientConfiguration {
+                        ssid,
+                        password: pass,
+                        ..Default::default()
+                    };
+                    let _ = self.wifi_sender.send(client_config).await;
+                }
+            }
         }
     }
 
@@ -81,6 +133,9 @@ impl<'a> ConfigMenu<'a> {
             if name == "wifi_pass" {
                 return Ok(&self.wifi_pass);
             }
+            if name == "wifi_autostart" {
+                return Ok(&self.wifi_autostart);
+            }
         }
         Err(())
     }
@@ -101,6 +156,12 @@ impl<'a> ConfigMenu<'a> {
         if name == "wifi_pass" {
             return self
                 .wifi_pass
+                .store(&self.key, &mut self.aes, &mut self.storage, input);
+        }
+        #[cfg(feature = "wifi")]
+        if name == "wifi_autostart" {
+            return self
+                .wifi_autostart
                 .store(&self.key, &mut self.aes, &mut self.storage, input);
         }
 
@@ -129,6 +190,14 @@ impl<'a> ConfigMenu<'a> {
                 return self
                     .wifi_pass
                     .read(&self.key, &mut self.aes, &mut self.storage, output);
+            }
+            if name == "wifi_autostart" {
+                return self.wifi_autostart.read(
+                    &self.key,
+                    &mut self.aes,
+                    &mut self.storage,
+                    output,
+                );
             }
         }
         Err(())

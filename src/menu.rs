@@ -49,6 +49,13 @@ async fn list_entries(menu: &'static Mutex<CriticalSectionRawMutex, ConfigMenu<'
         } else {
             unlocked.wifi_pass.print(cnt + 1, output.as_str());
         }
+        let name = unlocked.wifi_autostart.name;
+        let v = unlocked.read_entry(name, &mut output);
+        if v.is_err() {
+            println!("wifi_autostart: -read failure-");
+        } else {
+            unlocked.wifi_autostart.print(cnt + 1, output.as_str());
+        }
     }
     println!("---------------------------");
     println!("");

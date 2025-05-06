@@ -32,6 +32,11 @@ async fn run_config_menu(
     mut rx: UartRx<'static, Async>,
     mut tx: UartTx<'static, Async>,
 ) {
+    #[cfg(feature = "wifi")]
+    let mut c = config_menu.lock().await;
+    c.autostart_wifi().await;
+    drop(c);
+
     let mut state = MenuState::Idle(config_menu);
     loop {
         let secret_echo = state.secret_echo().await;
