@@ -55,7 +55,7 @@ impl<'a> ConfigMenu<'a> {
         );
         wifi_autostart.offset = offset + 32 + 64;
 
-        let mut config_menu = Self {
+        let config_menu = Self {
             entries: values,
             #[cfg(feature = "wifi")]
             wifi_ssid,
@@ -74,8 +74,6 @@ impl<'a> ConfigMenu<'a> {
 
     #[cfg(feature = "wifi")]
     pub async fn autostart_wifi(&mut self) {
-        use embassy_time::{Duration, Timer};
-
         let mut autostart = heapless::String::<32>::new();
         if let Ok(_) =
             self.wifi_autostart
