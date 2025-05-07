@@ -1,5 +1,6 @@
 #[cfg(feature = "wifi")]
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+#[cfg(feature = "wifi")]
 use embassy_sync::channel::Sender;
 use embedded_storage::ReadStorage;
 use embedded_storage::Storage;

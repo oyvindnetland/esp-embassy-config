@@ -43,7 +43,7 @@ esp-wifi = { version = "0.12.0", features = [
     "log",
     "wifi",
     "utils",
-], optional = true }
+], optional = true, default-features = false }
 esp-alloc = { version = "0.6.0", optional = true }
 embassy-net = { version = "0.6.0", features = [
     "tcp",
@@ -84,80 +84,84 @@ esp32example = [
     "esp-backtrace/esp32",
     "esp-println/esp32",
     "esp-println/uart",
+]
+esp32wifiexample = [
+    "esp32example",
+    "wifi",
+    "esp-embassy-wifihelper/esp32",
     "esp-wifi/esp32",
 ]
-esp32wifiexample = ["esp32example", "wifi", "esp-embassy-wifihelper/esp32"]
 esp32c2example = [
     "esp32c2",
     "esp-backtrace/esp32c2",
     "esp-println/esp32c2",
     "esp-println/uart",
-    "esp-wifi/esp32c2",
 ]
 esp32c2wifiexample = [
     "esp32c2example",
     "wifi",
     "esp-embassy-wifihelper/esp32c2",
+    "esp-wifi/esp32c2",
 ]
 esp32c3example = [
     "esp32c3",
     "esp-backtrace/esp32c3",
     "esp-println/esp32c3",
     "esp-println/uart",
-    "esp-wifi/esp32c3",
 ]
 esp32c3wifiexample = [
     "esp32c3example",
     "wifi",
     "esp-embassy-wifihelper/esp32c3",
+    "esp-wifi/esp32c3",
 ]
 esp32c6example = [
     "esp32c6",
     "esp-backtrace/esp32c6",
     "esp-println/esp32c6",
     "esp-println/jtag-serial",
-    "esp-wifi/esp32c6",
 ]
 esp32c6wifiexample = [
     "esp32c6example",
     "wifi",
     "esp-embassy-wifihelper/esp32c6",
+    "esp-wifi/esp32c6",
 ]
 esp32h2example = [
     "esp32h2",
     "esp-backtrace/esp32h2",
     "esp-println/esp32h2",
     "esp-println/jtag-serial",
-    "esp-wifi/esp32h2",
 ]
 esp32h2wifiexample = [
     "esp32h2example",
     "wifi",
     "esp-embassy-wifihelper/esp32h2",
+    "esp-wifi/esp32h2",
 ]
 esp32s2example = [
     "esp32s2",
     "esp-backtrace/esp32s2",
     "esp-println/esp32s2",
     "esp-println/uart",
-    "esp-wifi/esp32s2",
 ]
 esp32s2wifiexample = [
     "esp32s2example",
     "wifi",
     "esp-embassy-wifihelper/esp32s2",
+    "esp-wifi/esp32s2",
 ]
 esp32s3example = [
     "esp32s3",
     "esp-backtrace/esp32s3",
     "esp-println/esp32s3",
     "esp-println/jtag-serial",
-    "esp-wifi/esp32s3",
 ]
 esp32s3wifiexample = [
     "esp32s3example",
     "wifi",
     "esp-embassy-wifihelper/esp32s3",
+    "esp-wifi/esp32s3",
 ]
 
 [[example]]

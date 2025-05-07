@@ -3,6 +3,7 @@ use core::fmt;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use esp_println::println;
+#[cfg(feature = "wifi")]
 use esp_wifi::wifi::ClientConfiguration;
 use log::info;
 
